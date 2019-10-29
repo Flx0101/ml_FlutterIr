@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -5,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:tflite/tflite.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
-
 
 void main() {
   runApp(MyApp());
@@ -21,7 +21,6 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: TfliteHome(),
       title: "Image Recognizer",
-      
     );
   }
 }
@@ -38,8 +37,10 @@ class _TfliteHomeState extends State<TfliteHome> {
   double _imageWidth;
   double _imageHeight;
   bool _busy = false;
+  bool recognized = false;
 
-  List _recognitions;
+  List _recognitions = [];
+  List detectedObjects = [];
 
   @override
   void initState() {
@@ -80,7 +81,7 @@ class _TfliteHomeState extends State<TfliteHome> {
     setState(() {
       _busy = true;
     });
-    predictImage(image);
+    await predictImage(image);
   }
 
   predictImage(File image) async {
@@ -118,6 +119,8 @@ class _TfliteHomeState extends State<TfliteHome> {
 
     setState(() {
       _recognitions = recognitions;
+      detectedObjects.addAll(recognitions);
+      recognized = true;
     });
   }
 
@@ -127,8 +130,8 @@ class _TfliteHomeState extends State<TfliteHome> {
 
     setState(() {
       _recognitions = recognitions;
-      print("Recognition!!");
-      print(_recognitions);
+      detectedObjects.addAll(recognitions);
+      recognized = true;
     });
   }
 
@@ -140,14 +143,7 @@ class _TfliteHomeState extends State<TfliteHome> {
     double factorY = _imageHeight / _imageHeight * screen.width;
 
     Color blue = Colors.red;
-    var count=0;
-    return _recognitions.map((re) {
-      print("Hello\n");
-      count=count+1;
-      if(count==1 || re['confidenceInClass']>0.6){
-        print(re['confidenceInClass']);
-      print(re['detectedClass']);
-      
+    return _recognitions.where((re) => re['confidenceInClass'] > 0.6).map((re) {
       return Positioned(
         left: re["rect"]["x"] * factorX,
         top: re["rect"]["y"] * factorY,
@@ -168,32 +164,15 @@ class _TfliteHomeState extends State<TfliteHome> {
             ),
           ),
         ),
-      );}
-      else{
-         
-        return Positioned(
-        left: 0,
-        top: 0,
-        width: 0,
-        height:0,
-        child: Container(
-          decoration: BoxDecoration(
-              border: Border.all(
-            color: blue,
-            width: 3,
-          )),
-          child: Text(
-            "",
-            style: TextStyle(
-              background: Paint()..color = blue,
-              color: Colors.white,
-              fontSize: 2,
-            ),
-          ),
-        ),
-      );}
-     
-    }).toList() ;
+      );
+    }).toList();
+  }
+
+  Future<Null> clearObjects() async {
+    setState(() {
+     recognized = false;
+     detectedObjects.clear(); 
+    });
   }
 
   @override
@@ -202,12 +181,14 @@ class _TfliteHomeState extends State<TfliteHome> {
 
     List<Widget> stackChildren = [];
 
-    stackChildren.add(Positioned(
-      top: 0.0,
-      left: 0.0,
-      width: size.width,
-      child: _image == null ? Text("No Image Selected") : Image.file(_image),
-    ));
+    stackChildren.add(_image == null
+        ? Center(child: Text("No Image Selected"))
+        : Positioned(
+            top: 0.0,
+            left: 0.0,
+            width: size.width,
+            child: Image.file(_image),
+          ));
 
     stackChildren.addAll(renderBoxes(size));
 
@@ -224,7 +205,36 @@ class _TfliteHomeState extends State<TfliteHome> {
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.image),
         tooltip: "Pick Image from gallery",
-        onPressed: selectFromImagePicker,
+        onPressed: () async {
+          await selectFromImagePicker();
+          if (recognized) {
+            await showModalBottomSheet(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(16.0),
+                      topRight: Radius.circular(16.0)),
+                ),
+                context: context,
+                builder: (ctx) {
+                  return ListView.separated(
+                    separatorBuilder: (BuildContext _, int pos) {
+                      return Divider();
+                    },
+                    itemCount: detectedObjects.length,
+                    itemBuilder: (BuildContext _, int pos) {
+                      return Padding(
+                        padding: EdgeInsets.all(4.0),
+                        child: ListTile(
+                          title: Text(detectedObjects[pos]['detectedClass']),
+                          trailing: Text("${detectedObjects[pos]['confidenceInClass']*100} %"),
+                        ),
+                      );
+                    },
+                  );
+                });    
+                await clearObjects();                   
+          }
+        },
       ),
       body: Stack(
         children: stackChildren,
