@@ -166,7 +166,8 @@ class _TfliteHomeState extends State<TfliteHome> {
           ),
         ),
       );
-    }).toList();
+      
+    }).toList() ;
   }
 
   Future<Null> clearObjects() async {
