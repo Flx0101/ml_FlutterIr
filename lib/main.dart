@@ -166,8 +166,7 @@ class _TfliteHomeState extends State<TfliteHome> {
           ),
         ),
       );
-      
-    }).toList() ;
+    }).toList();
   }
 
   Future<Null> clearObjects() async {
@@ -230,16 +229,20 @@ class _TfliteHomeState extends State<TfliteHome> {
                     },
                     itemCount: higherConfidence.length > 0
                         ? higherConfidence.length
-                        : lowerConfidence.length,
+                        : lowerConfidence.length > 0
+                            ? lowerConfidence.length
+                            : 0,
                     itemBuilder: (BuildContext _, int pos) {
                       return Padding(
                         padding: EdgeInsets.all(4.0),
                         child: ListTile(
                           title: Text(higherConfidence.length > 0
                               ? higherConfidence[pos]['detectedClass']
-                              : lowerConfidence[pos]['detectedClass']),
+                              : lowerConfidence.length > 0
+                                  ? lowerConfidence[0]['detectedClass']
+                                  : "None"),
                           trailing: Text(
-                              "${higherConfidence.length > 0 ? higherConfidence[pos]['confidenceInClass'] * 100 : lowerConfidence[pos]['confidenceInClass'] * 100} %"),
+                              "${higherConfidence.length > 0 ? higherConfidence[pos]['confidenceInClass'] * 100 : lowerConfidence.length > 0 ? lowerConfidence[0]['confidenceInClass'] * 100 : 0} %"),
                         ),
                       );
                     },
