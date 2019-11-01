@@ -143,11 +143,8 @@ class _TfliteHomeState extends State<TfliteHome> {
     double factorY = _imageHeight / _imageHeight * screen.width;
 
     Color blue = Colors.red;
-    var count=0;
-    return _recognitions.map((re) {
-
-      count=count+1;
-    if(count==1 || re['confidenceInClass']>0.6){
+    print(_recognitions);
+    return _recognitions.where((re) => re['confidenceInClass'] > 0.6).map((re) {
       return Positioned(
         left: re["rect"]["x"] * factorX,
         top: re["rect"]["y"] * factorY,
@@ -168,38 +165,15 @@ class _TfliteHomeState extends State<TfliteHome> {
             ),
           ),
         ),
-      );}
-      else{
-
-        return Positioned(
-        left: 0,
-        top: 0,
-        width: 0,
-        height:0,
-        child: Container(
-          decoration: BoxDecoration(
-              border: Border.all(
-            color: blue,
-            width: 3,
-          )),
-          child: Text(
-            "",
-            style: TextStyle(
-              background: Paint()..color = blue,
-              color: Colors.white,
-              fontSize: 2,
-            ),
-          ),
-        ),
-      );}
-
+      );
+      
     }).toList() ;
   }
 
   Future<Null> clearObjects() async {
     setState(() {
-     recognized = false;
-     detectedObjects.clear(); 
+      recognized = false;
+      detectedObjects.clear();
     });
   }
 
@@ -244,26 +218,34 @@ class _TfliteHomeState extends State<TfliteHome> {
                 ),
                 context: context,
                 builder: (ctx) {
-                  print("Detected Objects");
-                  print(detectedObjects);
+                  List higherConfidence = detectedObjects
+                      .where((object) => object['confidenceInClass'] > 0.6)
+                      .toList();
+                  List lowerConfidence = detectedObjects
+                      .where((object) => object['confidenceInClass'] <= 0.6)
+                      .toList();
                   return ListView.separated(
                     separatorBuilder: (BuildContext _, int pos) {
                       return Divider();
                     },
-                   
-                    itemCount: detectedObjects.length,
+                    itemCount: higherConfidence.length > 0
+                        ? higherConfidence.length
+                        : lowerConfidence.length,
                     itemBuilder: (BuildContext _, int pos) {
                       return Padding(
                         padding: EdgeInsets.all(4.0),
                         child: ListTile(
-                          title: Text(detectedObjects[pos]['detectedClass']),
-                          trailing: Text("${detectedObjects[pos]['confidenceInClass']*100} %"),
+                          title: Text(higherConfidence.length > 0
+                              ? higherConfidence[pos]['detectedClass']
+                              : lowerConfidence[pos]['detectedClass']),
+                          trailing: Text(
+                              "${higherConfidence.length > 0 ? higherConfidence[pos]['confidenceInClass'] * 100 : lowerConfidence[pos]['confidenceInClass'] * 100} %"),
                         ),
                       );
                     },
                   );
-                });    
-                await clearObjects();                   
+                });
+            await clearObjects();
           }
         },
       ),
