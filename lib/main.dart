@@ -143,6 +143,7 @@ class _TfliteHomeState extends State<TfliteHome> {
     double factorY = _imageHeight / _imageHeight * screen.width;
 
     Color blue = Colors.red;
+    print(_recognitions);
     return _recognitions.where((re) => re['confidenceInClass'] > 0.6).map((re) {
       return Positioned(
         left: re["rect"]["x"] * factorX,
@@ -170,8 +171,8 @@ class _TfliteHomeState extends State<TfliteHome> {
 
   Future<Null> clearObjects() async {
     setState(() {
-     recognized = false;
-     detectedObjects.clear(); 
+      recognized = false;
+      detectedObjects.clear();
     });
   }
 
@@ -216,23 +217,34 @@ class _TfliteHomeState extends State<TfliteHome> {
                 ),
                 context: context,
                 builder: (ctx) {
+                  List higherConfidence = detectedObjects
+                      .where((object) => object['confidenceInClass'] > 0.6)
+                      .toList();
+                  List lowerConfidence = detectedObjects
+                      .where((object) => object['confidenceInClass'] <= 0.6)
+                      .toList();
                   return ListView.separated(
                     separatorBuilder: (BuildContext _, int pos) {
                       return Divider();
                     },
-                    itemCount: detectedObjects.length,
+                    itemCount: higherConfidence.length > 0
+                        ? higherConfidence.length
+                        : lowerConfidence.length,
                     itemBuilder: (BuildContext _, int pos) {
                       return Padding(
                         padding: EdgeInsets.all(4.0),
                         child: ListTile(
-                          title: Text(detectedObjects[pos]['detectedClass']),
-                          trailing: Text("${detectedObjects[pos]['confidenceInClass']*100} %"),
+                          title: Text(higherConfidence.length > 0
+                              ? higherConfidence[pos]['detectedClass']
+                              : lowerConfidence[pos]['detectedClass']),
+                          trailing: Text(
+                              "${higherConfidence.length > 0 ? higherConfidence[pos]['confidenceInClass'] * 100 : lowerConfidence[pos]['confidenceInClass'] * 100} %"),
                         ),
                       );
                     },
                   );
-                });    
-                await clearObjects();                   
+                });
+            await clearObjects();
           }
         },
       ),
