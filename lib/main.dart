@@ -230,7 +230,7 @@ class _TfliteHomeState extends State<TfliteHome> {
                     itemCount: higherConfidence.length > 0
                         ? higherConfidence.length
                         : lowerConfidence.length > 0
-                            ? lowerConfidence.length
+                            ? 1
                             : 0,
                     itemBuilder: (BuildContext _, int pos) {
                       return Padding(
